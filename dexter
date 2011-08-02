@@ -1,0 +1,132 @@
+#!/usr/bin/perl
+# Scans the syslog files for DHCP offers and activates the scanner
+use Data::Dump; # For debugging
+use Nmap::Scanner;
+use Term::ANSIColor qw/:constants colored/;
+use feature 'say';
+
+# Monitoring options
+$do_nmap = 1; # Whether to do an nmap on new victims
+$do_squidwatch = 1; # Whether to watch what squid reports as passthough HTTP connections
+
+# Setup options
+$nmap_invoke = "-A -T4 -PN -p1-4096 --max-rtt-timeout 200"; # How to invoke NMap
+$history = 0; # How many lines backwards to scan when the monitor starts. Set to '0' for start of program onwards. A higher number indicates looking back further in the syslog history
+$network = '192.168.1'; # Local network to scan
+$avoid = qr/$network\.(1|250)$/; # Avoid these victims (typically the reserved IP suffixes of the server and router)
+
+# Victim
+# Returns the victim id#. This is usually just the last tuple of the IP address. e.g. 192.168.1.31 = '31'.
+sub victim {
+	our $network;
+	$_ = shift;
+	m/^$network\.(\d+)$/; # Snip all but the last tuple from the machine IP
+	$1;
+}
+
+# VictimSays stub.
+# Pretty print various strings
+# $victim Full IP address of victim ($network. prefix is clipped out anyway)
+# $action The descriptive action (e.g. 'Port open')
+# $subject The variable of the scan (e.g. which port is open)
+# $extra Additional, unimportant details
+our @last_vsay;
+our $last_vsaycount = 0;
+sub vsay {
+	our @last_vsay, $last_vsaycount;
+	my @args = @_;
+	my ($victim, $action, $subject, $extra) = @args;
+
+	if (@last_vsay ~~ @args) { # Prevent duplicate messages
+		$last_vsaycount++;
+		return;
+	} elsif ($last_vsaycount > 0) {
+		say BLUE, "Last message repeated $last_vsaycount time" . ($last_vsaycount == 1 ? '' : 's'), RESET;
+		$last_vsaycount = 0;
+	}
+	@last_vsay = @args;
+	$victim = victim($victim);
+
+	if ($action =~ /\n/) { # Multi-line mode. Try to correct indentation while outputting multi-lines
+		my $intro = "Victim $victim";
+		my @lines = split "\n", $action;
+		print BOLD, BLUE, $intro, RESET, "> " . shift(@lines) . "\n";
+		print map { ' ' x (length($intro)+2) . "$_\n" } @lines;
+		print "\n";
+	} else { # Single line mode
+		print BOLD, BLUE, "Victim $victim", RESET, "> $action";
+		print " ", BLUE, $subject, RESET if $subject;
+		print " (", GREEN, $extra, RESET, ")" if $extra;
+		print "\n";
+	}
+}
+
+
+my $scanner = new Nmap::Scanner;
+$scanner->register_scan_started_event(\&scan_started);
+$scanner->register_scan_complete_event(\&scan_complete);
+$scanner->register_port_found_event(\&port_found);
+
+open(SYSLOG, '-|', "sudo tail -n $history -F /var/log/daemon.log" . ($do_squidwatch ? ' /var/log/squid/access.log' : ''));
+say BOLD, RED, ON_WHITE, "Monitor started", RESET;
+while (<SYSLOG>) {
+	chomp;
+	if (/DHCPOFFER on ($network\.[0-9]+) to ([a-f0-9:]+) (\(.*\) )?via/) {
+		next if $1 =~ $avoid;
+		vsay $1, "New victim", $2, ($3 ? substr($3, 1, -2) : undef);
+		$scanner->scan("$nmap_invoke $1") if $do_nmap;
+	} elsif (/DHCPOFFER on ($network\.[0-9]+) to ([a-f0-9:]+) via/) { # Found but no hostname
+		next if $1 =~ $avoid;
+		vsay $1, "New victim", $2;
+		$scanner->scan("$nmap_invoke $1") if $do_nmap;
+	} elsif ($do_squidwatch and /($network.[0-9]+) TCP_(?:HIT|MISS|REFRESH_MISS)\/200 \d+ (GET|POST) (http:\/\/.*?) /) {
+		next if $1 =~ $avoid;
+		vsay $1, "Hit", $3, ($2 eq 'GET' ? undef : "via $2");
+	} elsif ($do_squidwatch and /($network.[0-9]+) TCP_(?:HIT|MISS|REFRESH_MISS)\/30\d \d+ (GET|POST) (http:\/\/.*?) /) {
+		next if $1 =~ $avoid;
+		vsay $1, "Redirect", $3, ($2 eq 'GET' ? undef : "via $2");
+	}
+}
+say "End of feed";
+
+# NMap::Scanner callbacks. {{{
+# These are all really just pretty-printers to vsay()
+sub scan_started {
+	our $network;
+	my $self = shift;
+	my $host = shift;
+	for $ip (map {$_->addr()} $host->addresses()) { # For each ip address...
+		next unless $ip =~ /^$network\./;
+		vsay $ip, "Response status is", $host->status();
+	}
+}
+
+sub scan_complete {
+	our $network;
+	my $self = shift;
+	my $host = shift;
+	for $ip (map {$_->addr()} $host->addresses()) { # For each ip address...
+		next unless $ip =~ /^$network\./;
+		my @report = ('Scan complete for ' . colored('Victim ' . victim($ip), 'bold blue'));
+		my $opencount = 0;
+		my $ports = $host->get_port_list();
+		while ($port = $ports->get_next()) {
+			push @report, '' unless $opencount++; # Add blank line on first discovered open port
+			push @report, 'Port ' . ($port->protocol() eq 'UDP' ? 'UDP' : '') . $port->portid() . " is " . colored('OPEN!', 'bold red');
+		}
+		push @report, "", "Security scan status: " . ($opencount == 0 ? colored('PASSED', 'bold green') : colored('FAILED', 'bold red')), "";
+
+		vsay $ip, join("\n", @report);
+	}
+}
+
+sub port_found {
+	our $network;
+	my ($self, $host, $port) = @_;
+
+	for $ip (map {$_->addr()} $host->addresses()) { # For each ip address...
+		next unless $ip =~ /^$network\./;
+		vsay $ip, "Found open port", $port->portid, (defined $port->service and defined $port->service-product ? $port->service->product . " " . $port->service->version : 'Unknown protocol');
+	}
+}
+# }}}
