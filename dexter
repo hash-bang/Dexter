@@ -6,7 +6,7 @@ dexter - An automated Nmap based attacker
 
 =head1 SYNOPSIS
 
-	dexter [IP]
+	dexter [IP1...] [IP2...]
 
 =head1 DESCRIPTION
 
@@ -16,7 +16,7 @@ It functions using an OpenWRT Wireless Access Point to provide an internet conne
 It does this by monitoring the DHCP and Squid logs to detect newcommers to the network. After detection a series of attacks are triggered the status of which is shown on screen.
 Any subsequent web traffic is also shown.
 
-Invoked without an IP address the Dexter program will monitor the syslog of the computer for new connections. If an IP is specified Dexter will attack that specific machine and exit.
+Invoked without an IP addresses the Dexter program will monitor the syslog of the computer for new connections. If one or more IPs are specified Dexter will attack that specific machine and exit.
 
 =head1 BUGS
 
@@ -99,27 +99,37 @@ $scanner->register_scan_started_event(\&scan_started);
 $scanner->register_scan_complete_event(\&scan_complete);
 $scanner->register_port_found_event(\&port_found);
 
-open(SYSLOG, '-|', "sudo tail -n $history -F /var/log/daemon.log" . ($do_squidwatch ? ' /var/log/squid/access.log' : ''));
-say BOLD, RED, ON_WHITE, "Monitor started", RESET;
-while (<SYSLOG>) {
-	chomp;
-	if (/DHCPOFFER on ($network\.[0-9]+) to ([a-f0-9:]+) (\(.*\) )?via/) {
-		next if $1 =~ $avoid;
-		vsay $1, "New victim", $2, ($3 ? substr($3, 1, -2) : undef);
-		$scanner->scan("$nmap_invoke $1") if $do_nmap;
-	} elsif (/DHCPOFFER on ($network\.[0-9]+) to ([a-f0-9:]+) via/) { # Found but no hostname
-		next if $1 =~ $avoid;
-		vsay $1, "New victim", $2;
-		$scanner->scan("$nmap_invoke $1") if $do_nmap;
-	} elsif ($do_squidwatch and /($network.[0-9]+) TCP_(?:HIT|MISS|REFRESH_MISS)\/200 \d+ (GET|POST) (http:\/\/.*?) /) {
-		next if $1 =~ $avoid;
-		vsay $1, "Hit", $3, ($2 eq 'GET' ? undef : "via $2");
-	} elsif ($do_squidwatch and /($network.[0-9]+) TCP_(?:HIT|MISS|REFRESH_MISS)\/30\d \d+ (GET|POST) (http:\/\/.*?) /) {
-		next if $1 =~ $avoid;
-		vsay $1, "Redirect", $3, ($2 eq 'GET' ? undef : "via $2");
+if (@ARGV) { # Invoked Dexter with arguments
+	for (@ARGV) {
+		if (/$network\.[0-9]+/) {
+			$scanner->scan("$nmap_invoke $_");
+		} else {
+			say "Not a valid IP address or not in network '$network': $_";
+		}
 	}
+} else { # Invoked Dexter in automated mode
+	open(SYSLOG, '-|', "sudo tail -n $history -F /var/log/daemon.log" . ($do_squidwatch ? ' /var/log/squid/access.log' : ''));
+	say BOLD, RED, ON_WHITE, "Monitor started", RESET;
+	while (<SYSLOG>) {
+		chomp;
+		if (/DHCPOFFER on ($network\.[0-9]+) to ([a-f0-9:]+) (\(.*\) )?via/) {
+			next if $1 =~ $avoid;
+			vsay $1, "New victim", $2, ($3 ? substr($3, 1, -2) : undef);
+			$scanner->scan("$nmap_invoke $1") if $do_nmap;
+		} elsif (/DHCPOFFER on ($network\.[0-9]+) to ([a-f0-9:]+) via/) { # Found but no hostname
+			next if $1 =~ $avoid;
+			vsay $1, "New victim", $2;
+			$scanner->scan("$nmap_invoke $1") if $do_nmap;
+		} elsif ($do_squidwatch and /($network.[0-9]+) TCP_(?:HIT|MISS|REFRESH_MISS)\/200 \d+ (GET|POST) (http:\/\/.*?) /) {
+			next if $1 =~ $avoid;
+			vsay $1, "Hit", $3, ($2 eq 'GET' ? undef : "via $2");
+		} elsif ($do_squidwatch and /($network.[0-9]+) TCP_(?:HIT|MISS|REFRESH_MISS)\/30\d \d+ (GET|POST) (http:\/\/.*?) /) {
+			next if $1 =~ $avoid;
+			vsay $1, "Redirect", $3, ($2 eq 'GET' ? undef : "via $2");
+		}
+	}
+	say "End of feed";
 }
-say "End of feed";
 
 # NMap::Scanner callbacks. {{{
 # These are all really just pretty-printers to vsay()
@@ -158,7 +168,7 @@ sub port_found {
 
 	for $ip (map {$_->addr()} $host->addresses()) { # For each ip address...
 		next unless $ip =~ /^$network\./;
-		vsay $ip, "Found open port", $port->portid, (defined $port->service and defined $port->service-product ? $port->service->product . " " . $port->service->version : 'Unknown protocol');
+		vsay $ip, "Found open port", $port->portid, (defined $port->service and defined $port->service-product ? $port->service->product : 'Unknown protocol');
 	}
 }
 # }}}
