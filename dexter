@@ -8,6 +8,36 @@ dexter - An automated Nmap based attacker
 
 	dexter [IP1...] [IP2...]
 
+=head1 OPTIONS
+
+Options can be negated with the 'no' prefix. Thus '--color' turns on color and '--nocolor' turns it off.
+
+=over 8
+
+=item B<[IPs...]>
+
+Optional list of IP addresses to scan. These must be have the network prefix (see --network).
+
+If no IPs are specified Dexter will go into monitoring mode.
+
+=item B<--color>
+
+Output in a colorful way.
+
+=item B<--network [192.168.1]>
+
+Specify the network prefix to use.
+
+=item B<--nmap>
+
+Launch NMap on victims.
+
+=item B<--squid>
+
+Watch the Squid logs for victims and report any hit pages.
+
+=back
+
 =head1 DESCRIPTION
 
 Dexter is an automated computer scanning and hacking tool.
@@ -33,6 +63,7 @@ Matt Carter <m@ttcarter.com>
 
 # Scans the syslog files for DHCP offers and activates the scanner
 use Data::Dump; # For debugging
+use Getopt::Long;
 use Nmap::Scanner;
 use Term::ANSIColor qw/:constants colored/;
 use feature 'say';
@@ -41,11 +72,22 @@ use feature 'say';
 $do_nmap = 1; # Whether to do an nmap on new victims
 $do_squidwatch = 1; # Whether to watch what squid reports as passthough HTTP connections
 
+# Environment options
+$do_color = 1; # Output using color
+
 # Setup options
 $nmap_invoke = "-A -T4 -PN -p1-4096 --max-rtt-timeout 200"; # How to invoke NMap
 $history = 0; # How many lines backwards to scan when the monitor starts. Set to '0' for start of program onwards. A higher number indicates looking back further in the syslog history
 $network = '192.168.1'; # Local network to scan
 $avoid = qr/$network\.(1|250)$/; # Avoid these victims (typically the reserved IP suffixes of the server and router)
+
+# Command-line parsing
+GetOptions(
+	'color!' => \$do_color,
+	'network=s' => \$network,
+	'nmap!' => \$do_nmap,
+	'squid!' => \$do_squid,
+);
 
 # Victim
 # Returns the victim id#. This is usually just the last tuple of the IP address. e.g. 192.168.1.31 = '31'.
@@ -73,7 +115,7 @@ sub vsay {
 		$last_vsaycount++;
 		return;
 	} elsif ($last_vsaycount > 0) {
-		say BLUE, "Last message repeated $last_vsaycount time" . ($last_vsaycount == 1 ? '' : 's'), RESET;
+		say $do_color?BLUE:undef, "Last message repeated $last_vsaycount time" . ($last_vsaycount == 1 ? '' : 's'), $do_color?RESET:undef;
 		$last_vsaycount = 0;
 	}
 	@last_vsay = @args;
@@ -82,13 +124,23 @@ sub vsay {
 	if ($action =~ /\n/) { # Multi-line mode. Try to correct indentation while outputting multi-lines
 		my $intro = "Victim $victim";
 		my @lines = split "\n", $action;
-		print BOLD, BLUE, $intro, RESET, "> " . shift(@lines) . "\n";
+		if ($do_color) {
+			print BOLD, BLUE, $intro, RESET, "> " . shift(@lines) . "\n";
+		} else {
+			print "$intro> " . shift(@lines) . "\n";
+		}
 		print map { ' ' x (length($intro)+2) . "$_\n" } @lines;
 		print "\n";
 	} else { # Single line mode
-		print BOLD, BLUE, "Victim $victim", RESET, "> $action";
-		print " ", BLUE, $subject, RESET if $subject;
-		print " (", GREEN, $extra, RESET, ")" if $extra;
+		if ($do_color) {
+			print BOLD, BLUE, "Victim $victim", RESET, "> $action";
+			print " ", BLUE, $subject, RESET if $subject;
+			print " (", GREEN, $extra, RESET, ")" if $extra;
+		} else {
+			print "Victim $victim> $action";
+			print " $subject" if $subject;
+			print " ($extra)" if $extra;
+		}
 		print "\n";
 	}
 }
@@ -109,7 +161,11 @@ if (@ARGV) { # Invoked Dexter with arguments
 	}
 } else { # Invoked Dexter in automated mode
 	open(SYSLOG, '-|', "sudo tail -n $history -F /var/log/daemon.log" . ($do_squidwatch ? ' /var/log/squid/access.log' : ''));
-	say BOLD, RED, ON_WHITE, "Monitor started", RESET;
+	if ($do_color) {
+		say BOLD, RED, ON_WHITE, "Monitor started", RESET;
+	} else {
+		say "Monitor started";
+	}
 	while (<SYSLOG>) {
 		chomp;
 		if (/DHCPOFFER on ($network\.[0-9]+) to ([a-f0-9:]+) (\(.*\) )?via/) {
@@ -149,14 +205,14 @@ sub scan_complete {
 	my $host = shift;
 	for $ip (map {$_->addr()} $host->addresses()) { # For each ip address...
 		next unless $ip =~ /^$network\./;
-		my @report = ('Scan complete for ' . colored('Victim ' . victim($ip), 'bold blue'));
+		my @report = ('Scan complete for ' . colored('Victim ' . victim($ip), $do_color?'bold blue':undef));
 		my $opencount = 0;
 		my $ports = $host->get_port_list();
 		while ($port = $ports->get_next()) {
 			push @report, '' unless $opencount++; # Add blank line on first discovered open port
-			push @report, 'Port ' . ($port->protocol() eq 'UDP' ? 'UDP' : '') . $port->portid() . " is " . colored('OPEN!', 'bold red');
+			push @report, 'Port ' . ($port->protocol() eq 'UDP' ? 'UDP' : '') . $port->portid() . " is " . colored('OPEN!', $do_color?'bold red':undef);
 		}
-		push @report, "", "Security scan status: " . ($opencount == 0 ? colored('PASSED', 'bold green') : colored('FAILED', 'bold red')), "";
+		push @report, "", "Security scan status: " . ($opencount == 0 ? colored('PASSED', 'bold green') : colored('FAILED', $do_color?'bold red':undef)), "";
 
 		vsay $ip, join("\n", @report);
 	}
