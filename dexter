@@ -1,4 +1,36 @@
 #!/usr/bin/perl
+# POD {{{
+=head1 NAME
+
+dexter - An automated Nmap based attacker 
+
+=head1 SYNOPSIS
+
+	dexter [IP]
+
+=head1 DESCRIPTION
+
+Dexter is an automated computer scanning and hacking tool.
+
+It functions using an OpenWRT Wireless Access Point to provide an internet connection. Dexter will automatically attempt to attack any user that connects to it.
+It does this by monitoring the DHCP and Squid logs to detect newcommers to the network. After detection a series of attacks are triggered the status of which is shown on screen.
+Any subsequent web traffic is also shown.
+
+Invoked without an IP address the Dexter program will monitor the syslog of the computer for new connections. If an IP is specified Dexter will attack that specific machine and exit.
+
+=head1 BUGS
+
+Quite probably.
+
+Please report to the author when found.
+
+=head1 AUTHOR
+
+Matt Carter <m@ttcarter.com>
+
+=cut
+# }}} POD
+
 # Scans the syslog files for DHCP offers and activates the scanner
 use Data::Dump; # For debugging
 use Nmap::Scanner;
