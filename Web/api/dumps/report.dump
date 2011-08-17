@@ -1,0 +1,10 @@
+Victim 101> Response status is up
+Victim 101> Found open port 80
+Victim 101> Found open port 443
+Victim 101> Scan complete for Victim 101[0m
+            
+            Port 80 is OPEN![0m
+            Port 443 is OPEN![0m
+            
+            Security scan status: FAILED[0m
+

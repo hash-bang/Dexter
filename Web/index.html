@@ -1,0 +1,55 @@
+<html>
+<head>
+	<title>Dexter</title>
+	<link href="style.css" media="all" rel="stylesheet" type="text/css"/>
+	<script src="jquery-1.6.2.min.js"></script>
+	<script src="jquery-scrollto-1.4.2-min.js"></script>
+	<script src="game.js"></script>
+</head>
+<body>
+	<div class="screen" id="screen_home">
+		<h1>How safe is your phone?</h1>
+		<p>Take part in a free mobile phone health check to determine how safe your phone really is.</p>
+		<p>This program tries a number of attacks on your phone to try and detect common security problems.</p>
+		<div class="buttons">
+			<a class="next" href="javascript:$.go('instructions')"></a>
+		</div>
+	</div>
+	<div class="screen" id="screen_instructions">
+		<h1>Mobile Phone Healthcheck</h1>
+		<p>Here's how to scan your phone:</p>
+		<ol style="text-align: left">
+			<li>Use your phone to connect to <b>Mobile Phone Health check</b></li>
+			<li>Wait a short while as your phone is being scanned for security issues</li>
+			<li>A report will then be generated showing any potential security problems with your phone</li>
+		</ol>
+		<div class="buttons">
+			<a class="next" href="javascript:$.go('list')"></a>
+		</div>
+	</div>
+	<div class="screen" id="screen_list">
+		<div id="host_list" class="list"></div>
+	</div>
+	<div class="screen" id="screen_scanning">
+		<div style="margin-top: 80px"></div>
+		<img src="images/grill.png"/><br/>
+		<h1>Grilling your phone</h1>
+		<p>I am trying a number of attacks against your phone in order to find any possible security problems.</p>
+		<p>This can take a little while so just sit tight.</p>
+	</div>
+	<div class="screen" id="screen_report">
+		<div id="report_card">
+		</div>
+		<div class="buttons">
+			<a class="next" href="javascript:$.go('closure')"></a>
+		</div>
+	</div>
+	<div class="screen" id="screen_closure">
+		<h1>Thanks for taking part</h1>
+		<p>Don't forget to disconnect from the <b>Mobile Phone Healthcheck</b> WiFi point.</p>
+		<div class="buttons">
+			<a class="redo" href="javascript:$.go('home')"></a>
+		</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,115 @@
+body {
+	font-family: Arial, Helvetica, sans-serif;
+	color: black;
+	overflow: hidden;
+	margin: 0;
+	padding: 10px;
+	overflow: hidden;
+	width: 12000px;
+	background: white url(images/background.jpg);
+	text-align: center;
+	font-size: 22pt;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-o-user-select: none;
+	user-select: none;
+}
+
+a {
+	text-decoration: none;
+	color: black;
+}
+
+h1, h2 {
+	text-shadow: 0px 2px 3px #666;
+}
+
+h2 {
+	font-size: 25px;
+}
+
+.screen {
+	position: relative;
+	float: left;
+	width: 800px;
+	margin: 80px 500px;
+	height: 80%;
+	padding: 40px;
+
+	background: transparent url(images/white.png) repeat scroll top left;
+	-moz-border-radius: 20px;
+	-webkit-border-radius: 20px;
+	-goog-ms-border-radius: 20px;
+	border-radius: 20px;
+	-moz-box-shadow: 0 1px 3px rgba(0, 0, 0, .15);
+	-webkit-box-shadow: 0 1px 3px rgba(0, 0, 0, .15);
+	-goog-ms-box-shadow: 0 1px 3px rgba(0, 0, 0, .15);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, .15);
+}
+
+.list {
+	margin: 100px 30px 0 30px;
+}
+
+.list a {
+	display: block;
+	width: 100%;
+	height: 25px;
+	border: 1px solid #3c78a0;
+	padding: 15px;
+	margin: 15px auto 20px auto;
+	text-align: center;
+	border-radius: 5px;
+}
+
+.list a:hover {
+	background: #3c78a0;
+	color: white;
+}
+
+#report_card {
+	display: block;
+	padding: 130px 100px 150px 100px;
+	background: url(images/clipboard.png) no-repeat center top;
+	width: 545px;
+	height: 729px;
+	font-size: 15pt;
+}
+
+#report_card div {
+	margin: 0 50px 0 110px;
+	display: block;
+	height: 380px;
+	overflow-y: auto;
+}
+
+#report_card ul {
+	padding-left: 80px;
+	text-align: left;
+}
+
+/* Buttons */
+.buttons {
+	position: absolute;
+	top: 550px;
+	left: 375px;
+	z-index: 1000;
+	margin: 0 auto 0 auto;
+	text-align: center;
+	display: block;
+}
+
+.buttons a {
+	width: 256px;
+	height: 256px;
+	display: block;
+}
+
+.buttons .next {
+	background: url(images/next.png) no-repeat;
+}
+
+.buttons .redo {
+	background: url(images/redo.png) no-repeat;
+}
