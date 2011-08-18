@@ -89,6 +89,13 @@ h2 {
 	text-align: left;
 }
 
+#report_grade {
+	position: absolute;
+	z-index: 1000;
+	top: 470px;
+	left: 500px;
+}
+
 /* Buttons */
 .buttons {
 	position: absolute;

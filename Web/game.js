@@ -24,6 +24,7 @@ $(function() {
 				$.go('report');
 				if (data.status == 'ok') {
 					$('#report_cart').html('<div><h2>Phone security report</h2><p>Your phone is secure!</p><p>We couldn\'t find any issues with your phone.</p> <p style="font-size: 10pt">We try to do a scan for most known security issues but we can\'t gurentee a completely virus free phone.</p></div>');
+					$('#report_grade').html('<img src="images/grade-pass.png"/>');
 				} else {
 					var report = '<div><h2>Phone security report</h2><p>We found a few issues with your phone.</p><p>The following ports were found to be open:</p><ul>';
 					$.each(data.ports, function(port, name) {
@@ -31,6 +32,7 @@ $(function() {
 					});
 					report += '</ul><p>It might be a good idea to install a virus scanner on your phone.</p></div>';
 					$('#report_card').html(report);
+					$('#report_grade').html('<img src="images/grade-fail.png"/>');
 				}
 			});
 		}
