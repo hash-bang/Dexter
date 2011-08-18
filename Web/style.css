@@ -41,9 +41,9 @@ h2 {
 	position: relative;
 	float: left;
 	width: 800px;
-	margin: 80px 500px;
+	margin: 80px 400px;
 	height: 80%;
-	padding: 40px;
+	padding: 20px;
 
 	background: transparent url(images/white.png) repeat scroll top left;
 	-moz-border-radius: 20px;
@@ -108,7 +108,7 @@ h2 {
 .buttons {
 	position: absolute;
 	top: 550px;
-	left: 375px;
+	left: 360px;
 	z-index: 1000;
 	margin: 0 auto 0 auto;
 	text-align: center;
@@ -116,8 +116,8 @@ h2 {
 }
 
 .buttons a {
-	width: 256px;
-	height: 256px;
+	width: 128px;
+	height: 128px;
 	display: block;
 }
 
