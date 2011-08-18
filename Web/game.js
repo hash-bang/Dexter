@@ -1,7 +1,7 @@
 $(function() {
 	$.extend({
 		go: function(screen) {
-			$(document).scrollTo('#screen_' + screen, 800, {offset: -400});
+			$(document).scrollTo('#screen_' + screen, 800, {offset: -300});
 		},
 		refresh_list: function() {
 			$.getJSON('api/get_hosts.php?', function(data) {
