@@ -76,7 +76,7 @@ $do_squidwatch = 1; # Whether to watch what squid reports as passthough HTTP con
 $do_color = 1; # Output using color
 
 # Setup options
-$nmap_invoke = "-A -T4 -PN -p1-4096 --max-rtt-timeout 200"; # How to invoke NMap
+$nmap_invoke = "-A -T4 -PN -p1-4096 --max-rtt-timeout 200 --system-dns"; # How to invoke NMap
 $history = 0; # How many lines backwards to scan when the monitor starts. Set to '0' for start of program onwards. A higher number indicates looking back further in the syslog history
 $network = '192.168.1'; # Local network to scan
 $avoid = qr/$network\.(1|250)$/; # Avoid these victims (typically the reserved IP suffixes of the server and router)
@@ -205,14 +205,14 @@ sub scan_complete {
 	my $host = shift;
 	for $ip (map {$_->addr()} $host->addresses()) { # For each ip address...
 		next unless $ip =~ /^$network\./;
-		my @report = ('Scan complete for ' . colored('Victim ' . victim($ip), $do_color?'bold blue':undef));
+		my @report = ('Scan complete for ' . colored('Victim ' . victim($ip), $do_color?'bold blue':''));
 		my $opencount = 0;
 		my $ports = $host->get_port_list();
 		while ($port = $ports->get_next()) {
 			push @report, '' unless $opencount++; # Add blank line on first discovered open port
-			push @report, 'Port ' . ($port->protocol() eq 'UDP' ? 'UDP' : '') . $port->portid() . " is " . colored('OPEN!', $do_color?'bold red':undef);
+			push @report, 'Port ' . ($port->protocol() eq 'UDP' ? 'UDP' : '') . $port->portid() . " is " . colored('OPEN!', $do_color?'bold red':'');
 		}
-		push @report, "", "Security scan status: " . ($opencount == 0 ? colored('PASSED', 'bold green') : colored('FAILED', $do_color?'bold red':undef)), "";
+		push @report, "", "Security scan status: " . ($opencount == 0 ? colored('PASSED', $do_color?'bold green':'') : colored('FAILED', $do_color?'bold red':'')), "";
 
 		vsay $ip, join("\n", @report);
 	}
@@ -224,7 +224,7 @@ sub port_found {
 
 	for $ip (map {$_->addr()} $host->addresses()) { # For each ip address...
 		next unless $ip =~ /^$network\./;
-		vsay $ip, "Found open port", $port->portid, (defined $port->service and defined $port->service-product ? $port->service->product : 'Unknown protocol');
+		vsay $ip, "Found open port", $port->portid, (defined $port->service and defined $port->service->product ? $port->service->product : 'Unknown protocol');
 	}
 }
 # }}}
